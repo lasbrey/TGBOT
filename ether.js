@@ -2,8 +2,9 @@ const TelegramBot = require("node-telegram-bot-api");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram Bot token
-const bot = new TelegramBot('7089382647:AAGX5UKPXC9tat3q9_2Cvur2tkZam3i2piY', { polling: true });
-
+const bot = new TelegramBot("7089382647:AAGX5UKPXC9tat3q9_2Cvur2tkZam3i2piY", {
+  polling: true,
+});
 
 // Replace 'YOUR_ALCHEMY_API_KEY' with your Alchemy API key or use your preferred Ethereum node provider
 const alchemyApiKey = "ErZ0kSvmRJ6Uv9Mo87p3tK7IoJ8qUE_m";
@@ -22,6 +23,7 @@ bot.onText(/\/start/, (msg) => {
     "You can use the following commands:\n" +
     "/addWallet - Add a wallet to monitor\n" +
     "/listWallets - List all saved wallets\n" +
+    "/deleteWallet - Delete a monitored wallet\n" +
     "/start - Display this welcome message";
 
   bot.sendMessage(chatId, welcomeMessage);
@@ -88,6 +90,46 @@ bot.onText(/\/listWallets/, (msg) => {
   });
 
   bot.sendMessage(chatId, replyText);
+});
+
+// Handle the /deleteWallet command
+bot.onText(/\/deleteWallet/, (msg) => {
+  const chatId = msg.chat.id;
+
+  // Prompt the user to send the wallet address to delete
+  bot.sendMessage(
+    chatId,
+    "🔒Send Ethereum wallet address to stop monitoring\nExample: 0x1234567890abcdef0123456789abcdef01234567"
+  );
+
+  // Listen for the next message to capture the wallet address to delete
+  const deleteListener = (deleteMsg) => {
+    const walletAddressToDelete = deleteMsg.text.trim();
+
+    // Check if the wallet address is being monitored
+    if (walletMap.has(walletAddressToDelete)) {
+      // Remove the wallet from the map
+      const deletedWalletName = walletMap.get(walletAddressToDelete);
+      walletMap.delete(walletAddressToDelete);
+
+      // Notify the user that the wallet has been deleted
+      bot.sendMessage(
+        chatId,
+        `Wallet ${deletedWalletName} (${walletAddressToDelete}) has been deleted from monitoring`
+      );
+    } else {
+      bot.sendMessage(
+        chatId,
+        `Wallet address ${walletAddressToDelete} is not being monitored`
+      );
+    }
+
+    // Stop listening for new wallet addresses to delete
+    bot.removeListener("text", deleteListener);
+  };
+
+  // Listen for the next message to capture the wallet address to delete
+  bot.on("text", deleteListener);
 });
 
 // Function to check for transactions
